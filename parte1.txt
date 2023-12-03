@@ -1,0 +1,70 @@
+- Instalar os componentes:
+	- 3 roteadores modelo 1941 (conectados entre si);
+	- 3 comutadores modelo 2960 (uma conectado a cada roteador);
+	- 3 servidores (um para cada comutador);
+	- 7 PCs (3 para sub-rede A, 2 para as sub-redes B e C);
+- Conectar componentes diferentes com cabo de cobre straight-through;
+- Para cada roteador, deligá-lo, adicionar 2 placas de fibra e seu adaptador e ligá-lo novamente (aba Physical);
+- Conectar roteadores com fibra;
+- Ativar portas de rede dos roteadores;
+
+==========================================================================================================================================
+Configuração dos endereços IPv4 dos roteadores:
+- 6 sub-redes: dividiremos o último byte do endereço IPv4 em 8 partes: 256/8 = 32 de salto entre sub-redes (8 sub-redes possíveis)
+- Último byte da máscara: 256-32 = 224. 
+	     MASK: 255.255.255.224
+   REDE		|   BROAD	|   PLACAS DE REDE DOS ROTEADORES*
+192.168.0.0	| 192.168.0.31	| A-Gig0/0/0 e B-Gig0/0/0
+192.168.0.32	| 192.168.0.63	| A-Gig0/1/0 e C-Gig0/1/0
+192.168.0.64	| 192.168.0.95	| C-Gig0/0/0 e B-Gig0/1/0
+192.168.0.96	| 192.168.0.127	| A-Gig0/0
+192.168.0.128	| 192.168.0.159 | B-Gig0/0
+192.168.0.160	| 192.168.0.191 | C-Gig0/0
+192.168.0.192	| 192.168.0.223	| inutilizada
+192.168.0.224	| 192.168.0.255	| inutilizada
+* a letra que precede a porta da placa de rede corresponde à letra associada ao roteador na simulação
+- Endereços de hosts permitidos dentro de cada sub-rede: 192.168.0.x+2, com x entre o último byte dos IPs da rede e de broadcast, exclusive.
+  O primeiro endereço da rede será destinado ao roteador, e o segundo endereço será atribuído ao segundo roteador na ordem da tabela
+  caso seja uma rede entre roteadores, ou ao servidor local caso contrário.
+OBS: Atribuição do IPv4, máscara e gateway padrão e será feita de forma automática com o serviço DHCP que cada servidor da sub-rede implementará,
+     portanto os únicos endereços configurados manualmente serão os dos roteadores e dos próprios servidores.
+==========================================================================================================================================
+
+- Atribuir os endereços e máscara aos roteadores* e aos servidores** segundo a tabela;
+* Config->INTERFACE->{porta desejada}
+** Desktop->IP Configuration->Static
+- Configurar serviço DHCP de cada servidor em Services->DHCP (basta trocar o Default Gateway do serverPool para o roteador de sua sub-rede) e ligá-lo;
+- Configurar computadores para receber endereço IPv4, máscara e gateway padrão por meio do servidor DHCP da sua rede local (Desktop->IP Configuration->DHCP);
+
+==========================================================================================================================================
+- Configuração de roteamento estático de cada roteador com máscara 255.255.255.224:
+	ROTEADOR	|	REDES NÃO CONECTADAS
+	   A		|	 .64, .128, .160
+	   B		|	 .32, .96, .160
+	   C		|	 .0, .96, .128
+Para cada rede não conectada de cada roteador, verificar next hop:
+- Roteador A:
+	REDE		|	NEXT HOP (IPv4 da porta conectada do próximo roteador)
+   	.64 (C-B)	|	.2 (B-Gig0/0/0)
+	.128 (B)	|	.2 (B-Gig0/0/0)
+	.160 (C)	|	.34 (C-Gig0/1/0)
+- Roteador B:
+	REDE		|	NEXT HOP (IPv4 da porta conectada do próximo roteador)
+   	.32 (A-C)	|	.65 (C-Gig0/0/0)
+	.96 (A)		|	.1 (A-Gig0/0/0)
+	.160 (C)	|	.65 (C-Gig0/0/0)
+- Roteador C:
+	REDE		|	NEXT HOP (IPv4 da porta conectada do próximo roteador)
+   	.0 (A-B)	|	.33 (A-Gig0/1/0)
+	.96 (A)		|	.33 (A-Gig0/1/0)
+	.128 (B)	|	.66 (B-Gig0/1/0)
+==========================================================================================================================================
+
+- Configurar os 3 next hops de cada roteador conforme tabelas (Config->Routing->Static);
+- Tudo pronto!
+- Para testar, selecionar opção Simulation no canto direito, escolher o protocolo ICMP na aba aberta, escolher o envelope de carta no menu superior,
+  escolher a máquina origem, a máquina destino, e dar início na seta em Play Controls na aba de simulação.
+OBS: É normal que ocorram alguns bugs no Packet Tracer. Caso não funcione o teste, basta tentar novamente a simulação.
+     Para isso, selecione Reset Simulation na aba da simulação, e caso queira testar com outra origem/destino, clique no botão Delete no centro inferior.
+     Além disso, é normal que ocorra um problema com a lista de eventos, e um popup apareça informando que ela está cheia. Basta escolher a opção para
+     limpá-la e continuar normalmente.
